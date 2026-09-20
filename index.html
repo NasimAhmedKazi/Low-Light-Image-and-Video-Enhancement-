@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09121f" />
+    <title>LumaLift — Low-light enhancement</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="LumaLift home">
+          <span class="brand-mark"><span></span><span></span><span></span></span>
+          <span>LumaLift</span>
+        </a>
+
+        <div class="sidebar-group">
+          <p class="eyebrow">Workspace</p>
+          <nav class="nav-list" aria-label="Main navigation">
+            <a class="nav-item active" href="#workspace"><span class="nav-icon">✦</span> Enhance</a>
+            <a class="nav-item" href="#history"><span class="nav-icon">◷</span> History <span class="nav-count">3</span></a>
+            <a class="nav-item" href="#models"><span class="nav-icon">◈</span> Models</a>
+          </nav>
+        </div>
+
+        <div class="sidebar-bottom">
+          <div class="model-card">
+            <div class="model-card-top"><span class="status-dot"></span><span>Model ready</span><span class="model-version">v1.0</span></div>
+            <p>Zero-DCE</p>
+            <small>Zero-reference enhancement</small>
+          </div>
+          <a class="help-link" href="#about"><span>?</span> How it works</a>
+          <div class="profile"><div class="avatar">NK</div><div><strong>Nasim Kazi</strong><small>Local workspace</small></div><span class="more">•••</span></div>
+        </div>
+      </aside>
+
+      <main class="main-content" id="workspace">
+        <header class="topbar">
+          <div class="mobile-brand"><span class="brand-mark"><span></span><span></span><span></span></span> LumaLift</div>
+          <div class="breadcrumb"><span>Workspace</span><b>/</b><strong>Enhance</strong></div>
+          <div class="topbar-actions"><button class="icon-button" aria-label="Notifications">♧<i></i></button><button class="avatar small">NK</button></div>
+        </header>
+
+        <div class="content-wrap">
+          <section class="intro">
+            <div>
+              <p class="kicker">AI-powered restoration</p>
+              <h1>Bring your night<br /><em>shots to life.</em></h1>
+              <p class="intro-copy">Brighten low-light images and video with Zero-DCE. No reference images, no complicated setup.</p>
+            </div>
+            <div class="intro-stat"><span class="sparkle">✦</span><strong>100%</strong><span>local processing</span></div>
+          </section>
+
+          <section class="workspace-grid">
+            <div class="panel upload-panel">
+              <div class="panel-header">
+                <div><div class="section-label">01 <span>Source media</span></div><h2>Upload your file</h2></div>
+                <div class="media-tabs" role="tablist"><button class="media-tab active" data-type="image" role="tab">Image</button><button class="media-tab" data-type="video" role="tab">Video</button></div>
+              </div>
+              <label class="dropzone" id="dropzone" for="file-input">
+                <input id="file-input" type="file" accept="image/*" />
+                <div class="upload-icon">↑</div>
+                <strong>Drop your <span id="file-kind">image</span> here</strong>
+                <span>or <u>browse from your computer</u></span>
+                <small id="file-hint">PNG, JPG up to 25 MB</small>
+              </label>
+              <div class="sample-row"><span>Not ready with a file?</span><button id="sample-button">Try a sample <span>↗</span></button></div>
+            </div>
+
+            <div class="panel settings-panel">
+              <div class="panel-header">
+                <div><div class="section-label">02 <span>Fine tune</span></div><h2>Enhancement</h2></div>
+                <span class="auto-pill"><span class="status-dot"></span> Auto</span>
+              </div>
+              <div class="control">
+                <div class="control-label"><span>Enhancement strength</span><b id="strength-value">72%</b></div>
+                <input id="strength" type="range" min="0" max="100" value="72" />
+                <div class="range-labels"><span>Subtle</span><span>Bold</span></div>
+              </div>
+              <div class="control-row"><div><span class="control-title">Color balance</span><small>Preserve natural tones</small></div><button class="toggle on" id="color-toggle" aria-label="Toggle color balance"><span></span></button></div>
+              <div class="control-row"><div><span class="control-title">Denoise</span><small>Clean up image grain</small></div><button class="toggle on" id="denoise-toggle" aria-label="Toggle denoise"><span></span></button></div>
+              <button class="enhance-button" id="enhance-button"><span class="button-icon">✦</span> Enhance <span class="button-arrow">→</span></button>
+              <p class="processing-note"><span>◉</span> Processing happens on your device</p>
+            </div>
+          </section>
+
+          <section class="panel preview-panel">
+            <div class="panel-header preview-header">
+              <div><div class="section-label">03 <span>Preview</span></div><h2>See the difference</h2></div>
+              <div class="preview-actions"><span class="resolution">1280 × 853</span><button class="icon-button" aria-label="Expand preview">⤢</button></div>
+            </div>
+            <div class="comparison" id="comparison">
+              <img class="preview-image original-image" id="original-image" src="Zero-DCE/samples/dragon_inp.jpg" alt="Low-light original preview" />
+              <div class="enhanced-layer" id="enhanced-layer"><img class="preview-image" src="Zero-DCE/samples/dragon_out.png" alt="Enhanced preview" /></div>
+              <div class="comparison-handle" id="comparison-handle"><span>↔</span></div>
+              <div class="compare-label before">ORIGINAL</div><div class="compare-label after">ENHANCED</div>
+              <div class="preview-empty" id="preview-empty"><span>✦</span><p>Your enhanced preview will appear here</p></div>
+            </div>
+            <div class="preview-footer"><span><i class="legend original"></i> Original</span><span><i class="legend enhanced"></i> Enhanced</span><span class="drag-hint">Drag the divider to compare</span><button class="download-button" id="download-button" disabled>Download <span>↓</span></button></div>
+          </section>
+
+          <section class="bottom-row" id="history">
+            <div class="panel recent-panel"><div class="panel-header compact"><div><div class="section-label">Recent</div><h2>Enhancement history</h2></div><a href="#">View all <span>→</span></a></div><div class="history-list"><div class="history-item"><img src="Zero-DCE/samples/jon_snow_inp.png" alt="" /><div><strong>jon_snow_inp.png</strong><small>Enhanced just now · Image</small></div><span class="history-status">Done</span><button>•••</button></div><div class="history-item"><img src="Zero-DCE/samples/man_inp.jpg" alt="" /><div><strong>night_walk.jpg</strong><small>Yesterday · Image</small></div><span class="history-status">Done</span><button>•••</button></div></div></div>
+            <div class="tip-card"><span class="tip-icon">✧</span><p><strong>Pro tip</strong><br />For best results, keep enhancement strength between <b>60–80%</b>.</p><span class="tip-close">×</span></div>
+          </section>
+          <footer>Built on <a href="https://arxiv.org/abs/2001.06826">Zero-Reference Deep Curve Estimation</a><span>·</span> Your files never leave this device.</footer>
+        </div>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <script src="script.js"></script>
+  </body>
+</html>
