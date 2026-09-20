@@ -6,6 +6,18 @@ This repository consists of 2 parts:
 1. A Deep Learning model training framework to perform low light image enhancement (Python, Tensorflow, Pillow, Numpy)
 2. Simple software to read low light video file and save a brightened version of the same, with audio (C++, OpenCV, Tensorflow C++ API, FFMPEG)
 
+## Frontend
+
+The repository includes a dependency-free browser workspace in `index.html`. It provides image and video upload states, enhancement controls, an interactive before/after preview, sample assets, and a recent-enhancement history surface.
+
+To preview it locally:
+
+```bash
+python3 -m http.server 4173
+```
+
+Then open <http://localhost:4173>. The browser UI is ready to be connected to the local Zero-DCE inference command or a future API; its current enhancement action demonstrates the interaction flow without moving files off-device.
+
 ## Brightening Algorithm - Zero-DCE
 The deep learning model is a Tensorflow 2.2 implementation of:
 
