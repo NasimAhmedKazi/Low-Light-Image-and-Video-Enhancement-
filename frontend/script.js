@@ -1,17 +1,23 @@
 const dropzone = document.querySelector("#dropzone");
 const fileInput = document.querySelector("#file-input");
-const fileKind = document.querySelector("#file-kind");
 const fileHint = document.querySelector("#file-hint");
+const fileTitle = document.querySelector("#file-title");
 const originalImage = document.querySelector("#original-image");
-const enhancedLayer = document.querySelector("#enhanced-layer");
+const originalVideo = document.querySelector("#original-video");
 const comparison = document.querySelector("#comparison");
-const comparisonHandle = document.querySelector("#comparison-handle");
+const previewEmpty = document.querySelector("#preview-empty");
+const resolution = document.querySelector("#resolution");
 const strength = document.querySelector("#strength");
 const strengthValue = document.querySelector("#strength-value");
 const downloadButton = document.querySelector("#download-button");
 const toast = document.querySelector("#toast");
+const originalLabel = document.querySelector("#original-label");
+const enhancedLabel = document.querySelector(".compare-label.after");
+
 let selectedType = "image";
-let objectUrl = null;
+let currentObjectUrl = null;
+let selectedFile = null;
+let loadId = 0;
 
 function showToast(message) {
   toast.textContent = message;
@@ -21,34 +27,91 @@ function showToast(message) {
 
 function setComparison(value) {
   const percentage = `${Math.max(4, Math.min(96, value))}%`;
-  enhancedLayer.style.width = percentage;
-  comparisonHandle.style.left = percentage;
+  comparison.style.setProperty("--split", percentage);
 }
 
 function loadFile(file) {
-  if (!file) return;
-  if (selectedType === "image" && !file.type.startsWith("image/")) {
-    showToast("Please choose an image file.");
+  if (!file) {
     return;
   }
-  if (selectedType === "video" && !file.type.startsWith("video/")) {
-    showToast("Please choose a video file.");
+
+  const isImage = file.type.startsWith("image/");
+  const isVideo = file.type.startsWith("video/");
+  if ((selectedType === "image" && !isImage) || (selectedType === "video" && !isVideo)) {
+    showToast(`Please choose a ${selectedType} file.`);
     return;
   }
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  objectUrl = URL.createObjectURL(file);
-  if (selectedType === "image") {
-    originalImage.src = objectUrl;
-    dropzone.querySelector("strong").firstChild.textContent = "Ready to enhance: ";
-    fileHint.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
-    downloadButton.disabled = false;
+
+  const nextObjectUrl = URL.createObjectURL(file);
+  const thisLoad = ++loadId;
+
+  function activatePreview(width, height) {
+    if (thisLoad !== loadId) {
+      URL.revokeObjectURL(nextObjectUrl);
+      return;
+    }
+
+    const previousObjectUrl = currentObjectUrl;
+    currentObjectUrl = nextObjectUrl;
+    selectedFile = file;
+    previewEmpty.hidden = true;
+    originalImage.hidden = !isImage;
+    originalVideo.hidden = !isVideo;
+    originalLabel.hidden = false;
+    enhancedLabel.hidden = false;
+    comparison.classList.add("has-media");
+
+    if (isImage) {
+      originalVideo.pause();
+      originalVideo.removeAttribute("src");
+      originalVideo.load();
+      originalImage.src = nextObjectUrl;
+      originalImage.alt = `Original preview of ${file.name}`;
+      resolution.textContent = `${width} × ${height}`;
+    } else {
+      originalImage.removeAttribute("src");
+      originalVideo.pause();
+      originalVideo.src = nextObjectUrl;
+      resolution.textContent = `${width} × ${height}`;
+    }
+
+    fileTitle.textContent = file.name;
+    fileHint.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB · ready to preview`;
+    downloadButton.disabled = true;
+    showToast(`${file.name} loaded into the preview.`);
+    if (previousObjectUrl) {
+      URL.revokeObjectURL(previousObjectUrl);
+    }
+  }
+
+  if (isImage) {
+    const image = new Image();
+    image.onload = () => activatePreview(image.naturalWidth, image.naturalHeight);
+    image.onerror = () => {
+      URL.revokeObjectURL(nextObjectUrl);
+      if (thisLoad === loadId) {
+        showToast("This image could not be opened. Try a PNG, JPG, or WebP file.");
+      }
+    };
+    image.src = nextObjectUrl;
   } else {
-    fileHint.textContent = `${file.name} · ready for video enhancement`;
-    showToast("Video loaded. Enhance to start processing.");
+    const video = document.createElement("video");
+    video.onloadedmetadata = () => activatePreview(video.videoWidth, video.videoHeight);
+    video.onerror = () => {
+      URL.revokeObjectURL(nextObjectUrl);
+      if (thisLoad === loadId) {
+        showToast("This video could not be opened in your browser.");
+      }
+    };
+    video.src = nextObjectUrl;
   }
 }
 
-fileInput.addEventListener("change", (event) => loadFile(event.target.files[0]));
+fileInput.addEventListener("change", () => {
+  loadFile(fileInput.files[0]);
+  fileInput.value = "";
+});
+
 ["dragenter", "dragover"].forEach((eventName) => dropzone.addEventListener(eventName, (event) => {
   event.preventDefault();
   dropzone.classList.add("dragover");
@@ -63,7 +126,7 @@ document.querySelectorAll(".media-tab").forEach((tab) => tab.addEventListener("c
   document.querySelector(".media-tab.active").classList.remove("active");
   tab.classList.add("active");
   selectedType = tab.dataset.type;
-  fileKind.textContent = selectedType;
+  fileTitle.textContent = `Drop your ${selectedType} here`;
   fileHint.textContent = selectedType === "image" ? "PNG, JPG up to 25 MB" : "MP4, MOV up to 500 MB";
   fileInput.accept = selectedType === "image" ? "image/*" : "video/*";
 }));
@@ -76,22 +139,16 @@ strength.addEventListener("input", () => {
 document.querySelectorAll(".toggle").forEach((toggle) => toggle.addEventListener("click", () => toggle.classList.toggle("on")));
 
 document.querySelector("#sample-button").addEventListener("click", () => {
-  originalImage.src = "Zero-DCE/samples/dragon_inp.jpg";
-  fileHint.textContent = "dragon_inp.jpg · sample image";
-  downloadButton.disabled = false;
-  showToast("Sample image loaded.");
+  showToast("Choose an image from your device to preview it.");
+  fileInput.click();
 });
 
 document.querySelector("#enhance-button").addEventListener("click", () => {
-  const button = document.querySelector("#enhance-button");
-  button.disabled = true;
-  button.innerHTML = '<span class="button-icon">◌</span> Enhancing...';
-  window.setTimeout(() => {
-    button.disabled = false;
-    button.innerHTML = '<span class="button-icon">✦</span> Enhance <span class="button-arrow">→</span>';
-    downloadButton.disabled = false;
-    showToast("Enhancement complete — drag the divider to compare.");
-  }, 850);
+  if (!selectedFile) {
+    showToast("Select an image or video first.");
+    return;
+  }
+  showToast("The Zero-DCE inference service is not connected to this frontend yet.");
 });
 
 comparison.addEventListener("pointermove", (event) => {
@@ -104,6 +161,5 @@ comparison.addEventListener("pointerdown", (event) => {
   const bounds = comparison.getBoundingClientRect();
   setComparison(((event.clientX - bounds.left) / bounds.width) * 100);
 });
-comparisonHandle.addEventListener("pointerdown", (event) => event.stopPropagation());
 
-downloadButton.addEventListener("click", () => showToast("Download is ready when the local model is connected."));
+downloadButton.addEventListener("click", () => showToast("No enhanced output is available to download yet."));
