@@ -22,7 +22,7 @@ python backend/app.py
 
 Open <http://localhost:5001>. The backend loads `Zero-DCE/model_trained/model.tflite` on the first health check. Keep the process running while using the app. Image inference is supported; video preview is available, but video enhancement still uses the separate C++ workflow below.
 
-The Vercel deployment serves the static frontend only. To use model inference, run the local backend and open its `localhost:5001` page.
+Vercel deploys the Flask app and TFLite model together, so image inference is available from the deployed URL as well. The temporary anonymous Vercel preview expires after about an hour unless it is claimed; sign in to Vercel for a persistent deployment. Vercel Functions have a 60-second inference limit.
 
 ## Brightening Algorithm - Zero-DCE
 The deep learning model is a Tensorflow 2.2 implementation of:
