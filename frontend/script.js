@@ -1,17 +1,31 @@
 const dropzone = document.querySelector("#dropzone");
 const fileInput = document.querySelector("#file-input");
-const fileKind = document.querySelector("#file-kind");
 const fileHint = document.querySelector("#file-hint");
+const fileTitle = document.querySelector("#file-title");
 const originalImage = document.querySelector("#original-image");
-const enhancedLayer = document.querySelector("#enhanced-layer");
+const originalVideo = document.querySelector("#original-video");
 const comparison = document.querySelector("#comparison");
-const comparisonHandle = document.querySelector("#comparison-handle");
+const previewEmpty = document.querySelector("#preview-empty");
+const enhancedImage = document.querySelector("#enhanced-image");
+const enhancedEmpty = document.querySelector("#enhanced-empty");
+const resolution = document.querySelector("#resolution");
 const strength = document.querySelector("#strength");
 const strengthValue = document.querySelector("#strength-value");
+const enhanceButton = document.querySelector("#enhance-button");
 const downloadButton = document.querySelector("#download-button");
 const toast = document.querySelector("#toast");
+const originalLabel = document.querySelector("#original-label");
+const enhancedLabel = document.querySelector(".compare-label.after");
+const modelStatus = document.querySelector("#model-status");
+const modelStatusDot = document.querySelector("#model-status-dot");
+const modelDetail = document.querySelector("#model-detail");
+
 let selectedType = "image";
-let objectUrl = null;
+let currentObjectUrl = null;
+let enhancedObjectUrl = null;
+let selectedFile = null;
+let loadId = 0;
+let enhancementId = 0;
 
 function showToast(message) {
   toast.textContent = message;
@@ -21,34 +35,126 @@ function showToast(message) {
 
 function setComparison(value) {
   const percentage = `${Math.max(4, Math.min(96, value))}%`;
-  enhancedLayer.style.width = percentage;
-  comparisonHandle.style.left = percentage;
+  comparison.style.setProperty("--split", percentage);
+}
+
+function clearEnhancedPreview() {
+  enhancementId += 1;
+  if (enhancedObjectUrl) {
+    URL.revokeObjectURL(enhancedObjectUrl);
+    enhancedObjectUrl = null;
+  }
+  enhancedImage.removeAttribute("src");
+  enhancedImage.hidden = true;
+  enhancedEmpty.hidden = false;
+  downloadButton.disabled = true;
+  enhanceButton.disabled = false;
+  enhanceButton.innerHTML = '<span class="button-icon">✦</span> Enhance <span class="button-arrow">→</span>';
+}
+
+function setModelStatus(ready, detail) {
+  modelStatus.textContent = ready ? "Model ready" : "Model unavailable";
+  modelDetail.textContent = detail;
+  modelStatusDot.classList.toggle("status-off", !ready);
+}
+
+async function checkModelStatus() {
+  try {
+    const response = await fetch("/api/health");
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ready) {
+      throw new Error(result.error || "Start the local backend with python backend/app.py.");
+    }
+    setModelStatus(true, "Zero-DCE inference is available");
+  } catch (error) {
+    setModelStatus(false, error.message === "Failed to fetch"
+      ? "Run python backend/app.py to connect"
+      : error.message);
+  }
 }
 
 function loadFile(file) {
-  if (!file) return;
-  if (selectedType === "image" && !file.type.startsWith("image/")) {
-    showToast("Please choose an image file.");
+  if (!file) {
     return;
   }
-  if (selectedType === "video" && !file.type.startsWith("video/")) {
-    showToast("Please choose a video file.");
+
+  const isImage = file.type.startsWith("image/");
+  const isVideo = file.type.startsWith("video/");
+  if ((selectedType === "image" && !isImage) || (selectedType === "video" && !isVideo)) {
+    showToast(`Please choose a ${selectedType} file.`);
     return;
   }
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  objectUrl = URL.createObjectURL(file);
-  if (selectedType === "image") {
-    originalImage.src = objectUrl;
-    dropzone.querySelector("strong").firstChild.textContent = "Ready to enhance: ";
-    fileHint.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
-    downloadButton.disabled = false;
+
+  const nextObjectUrl = URL.createObjectURL(file);
+  const thisLoad = ++loadId;
+
+  function activatePreview(width, height) {
+    if (thisLoad !== loadId) {
+      URL.revokeObjectURL(nextObjectUrl);
+      return;
+    }
+
+    const previousObjectUrl = currentObjectUrl;
+    currentObjectUrl = nextObjectUrl;
+    selectedFile = file;
+    previewEmpty.hidden = true;
+    originalImage.hidden = !isImage;
+    originalVideo.hidden = !isVideo;
+    originalLabel.hidden = false;
+    enhancedLabel.hidden = false;
+    comparison.classList.add("has-media");
+
+    if (isImage) {
+      originalVideo.pause();
+      originalVideo.removeAttribute("src");
+      originalVideo.load();
+      originalImage.src = nextObjectUrl;
+      originalImage.alt = `Original preview of ${file.name}`;
+      resolution.textContent = `${width} × ${height}`;
+    } else {
+      originalImage.removeAttribute("src");
+      originalVideo.pause();
+      originalVideo.src = nextObjectUrl;
+      resolution.textContent = `${width} × ${height}`;
+    }
+
+    fileTitle.textContent = file.name;
+    fileHint.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB · ready to preview`;
+    clearEnhancedPreview();
+    showToast(`${file.name} loaded into the preview.`);
+    if (previousObjectUrl) {
+      URL.revokeObjectURL(previousObjectUrl);
+    }
+  }
+
+  if (isImage) {
+    const image = new Image();
+    image.onload = () => activatePreview(image.naturalWidth, image.naturalHeight);
+    image.onerror = () => {
+      URL.revokeObjectURL(nextObjectUrl);
+      if (thisLoad === loadId) {
+        showToast("This image could not be opened. Try a PNG, JPG, or WebP file.");
+      }
+    };
+    image.src = nextObjectUrl;
   } else {
-    fileHint.textContent = `${file.name} · ready for video enhancement`;
-    showToast("Video loaded. Enhance to start processing.");
+    const video = document.createElement("video");
+    video.onloadedmetadata = () => activatePreview(video.videoWidth, video.videoHeight);
+    video.onerror = () => {
+      URL.revokeObjectURL(nextObjectUrl);
+      if (thisLoad === loadId) {
+        showToast("This video could not be opened in your browser.");
+      }
+    };
+    video.src = nextObjectUrl;
   }
 }
 
-fileInput.addEventListener("change", (event) => loadFile(event.target.files[0]));
+fileInput.addEventListener("change", () => {
+  loadFile(fileInput.files[0]);
+  fileInput.value = "";
+});
+
 ["dragenter", "dragover"].forEach((eventName) => dropzone.addEventListener(eventName, (event) => {
   event.preventDefault();
   dropzone.classList.add("dragover");
@@ -63,7 +169,7 @@ document.querySelectorAll(".media-tab").forEach((tab) => tab.addEventListener("c
   document.querySelector(".media-tab.active").classList.remove("active");
   tab.classList.add("active");
   selectedType = tab.dataset.type;
-  fileKind.textContent = selectedType;
+  fileTitle.textContent = `Drop your ${selectedType} here`;
   fileHint.textContent = selectedType === "image" ? "PNG, JPG up to 25 MB" : "MP4, MOV up to 500 MB";
   fileInput.accept = selectedType === "image" ? "image/*" : "video/*";
 }));
@@ -73,25 +179,67 @@ strength.addEventListener("input", () => {
   strength.style.background = `linear-gradient(90deg, var(--mint) ${strength.value}%, #2b4054 ${strength.value}%)`;
 });
 
-document.querySelectorAll(".toggle").forEach((toggle) => toggle.addEventListener("click", () => toggle.classList.toggle("on")));
-
 document.querySelector("#sample-button").addEventListener("click", () => {
-  originalImage.src = "Zero-DCE/samples/dragon_inp.jpg";
-  fileHint.textContent = "dragon_inp.jpg · sample image";
-  downloadButton.disabled = false;
-  showToast("Sample image loaded.");
+  showToast("Choose an image from your device to preview it.");
+  fileInput.click();
 });
 
-document.querySelector("#enhance-button").addEventListener("click", () => {
-  const button = document.querySelector("#enhance-button");
-  button.disabled = true;
-  button.innerHTML = '<span class="button-icon">◌</span> Enhancing...';
-  window.setTimeout(() => {
-    button.disabled = false;
-    button.innerHTML = '<span class="button-icon">✦</span> Enhance <span class="button-arrow">→</span>';
+enhanceButton.addEventListener("click", async () => {
+  if (!selectedFile) {
+    showToast("Select an image or video first.");
+    return;
+  }
+  if (selectedType !== "image") {
+    showToast("Video enhancement is not available in the image model yet.");
+    return;
+  }
+
+  const thisEnhancement = ++enhancementId;
+  const formData = new FormData();
+  formData.append("file", selectedFile);
+  formData.append("strength", strength.value);
+  enhanceButton.disabled = true;
+  enhanceButton.innerHTML = '<span class="button-icon">◌</span> Enhancing...';
+  downloadButton.disabled = true;
+
+  try {
+    const response = await fetch("/api/enhance", { method: "POST", body: formData });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.error || `Enhancement failed (${response.status}).`);
+    }
+
+    const resultBlob = await response.blob();
+    if (thisEnhancement !== enhancementId) {
+      return;
+    }
+    const nextEnhancedUrl = URL.createObjectURL(resultBlob);
+    const previousEnhancedUrl = enhancedObjectUrl;
+    enhancedObjectUrl = nextEnhancedUrl;
+    enhancedImage.src = nextEnhancedUrl;
+    enhancedImage.hidden = false;
+    enhancedEmpty.hidden = true;
+    enhancedImage.onload = () => {
+      comparison.style.setProperty("--preview-width", `${comparison.clientWidth}px`);
+    };
+    comparison.style.setProperty("--preview-width", `${comparison.clientWidth}px`);
     downloadButton.disabled = false;
-    showToast("Enhancement complete — drag the divider to compare.");
-  }, 850);
+    if (previousEnhancedUrl) {
+      URL.revokeObjectURL(previousEnhancedUrl);
+    }
+    showToast("Image enhanced with Zero-DCE.");
+  } catch (error) {
+    if (thisEnhancement === enhancementId) {
+      showToast(error.message.includes("Failed to fetch")
+        ? "Cannot reach the inference service. Start it with python backend/app.py."
+        : error.message);
+    }
+  } finally {
+    if (thisEnhancement === enhancementId) {
+      enhanceButton.disabled = false;
+      enhanceButton.innerHTML = '<span class="button-icon">✦</span> Enhance <span class="button-arrow">→</span>';
+    }
+  }
 });
 
 comparison.addEventListener("pointermove", (event) => {
@@ -104,6 +252,17 @@ comparison.addEventListener("pointerdown", (event) => {
   const bounds = comparison.getBoundingClientRect();
   setComparison(((event.clientX - bounds.left) / bounds.width) * 100);
 });
-comparisonHandle.addEventListener("pointerdown", (event) => event.stopPropagation());
 
-downloadButton.addEventListener("click", () => showToast("Download is ready when the local model is connected."));
+downloadButton.addEventListener("click", () => {
+  if (!enhancedObjectUrl || !selectedFile) return;
+  const name = selectedFile.name.replace(/\.[^.]+$/, "") || "enhanced-image";
+  const link = document.createElement("a");
+  link.href = enhancedObjectUrl;
+  link.download = `${name}-enhanced.png`;
+  link.click();
+});
+
+window.addEventListener("resize", () => {
+  comparison.style.setProperty("--preview-width", `${comparison.clientWidth}px`);
+});
+checkModelStatus();

@@ -1,22 +1,28 @@
 # Image & Video Brightening with Zero-DCE
 
-This repository consists of 2 parts:
+This repository consists of 3 parts:
 
 
 1. A Deep Learning model training framework to perform low light image enhancement (Python, Tensorflow, Pillow, Numpy)
 2. Simple software to read low light video file and save a brightened version of the same, with audio (C++, OpenCV, Tensorflow C++ API, FFMPEG)
+3. A browser frontend for selecting and previewing local images and videos
 
 ## Frontend
 
-The repository includes a dependency-free browser workspace in `index.html`. It provides image and video upload states, enhancement controls, an interactive before/after preview, sample assets, and a recent-enhancement history surface.
+The repository includes a browser workspace in `frontend/` and a local Flask API that runs the included Zero-DCE TFLite model with LiteRT. Selecting or dropping an image previews the original locally; pressing **Enhance** sends it to the local model and displays the returned result for comparison and download.
 
-To preview it locally:
+To run the complete image-enhancement app locally on Python 3.11:
 
 ```bash
-python3 -m http.server 4173
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
+python backend/app.py
 ```
 
-Then open <http://localhost:4173>. The browser UI is ready to be connected to the local Zero-DCE inference command or a future API; its current enhancement action demonstrates the interaction flow without moving files off-device.
+Open <http://localhost:5001>. The backend loads `Zero-DCE/model_trained/model.tflite` on the first health check. Keep the process running while using the app. Image inference is supported; video preview is available, but video enhancement still uses the separate C++ workflow below.
+
+Vercel deploys the Flask app and TFLite model together using Python 3.12 and LiteRT 2.2, so image inference is available from the deployed URL as well. Local Python before 3.12 uses LiteRT 1.0.1. Vercel Functions have a 60-second inference limit.
 
 ## Brightening Algorithm - Zero-DCE
 The deep learning model is a Tensorflow 2.2 implementation of:

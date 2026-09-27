@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="upload-preview.css?v=20260927" />
   </head>
   <body>
     <div class="app-shell">
@@ -29,9 +30,9 @@
 
         <div class="sidebar-bottom">
           <div class="model-card">
-            <div class="model-card-top"><span class="status-dot"></span><span>Model ready</span><span class="model-version">v1.0</span></div>
+            <div class="model-card-top"><span class="status-dot" id="model-status-dot"></span><span id="model-status">Checking model</span><span class="model-version">v1.0</span></div>
             <p>Zero-DCE</p>
-            <small>Zero-reference enhancement</small>
+            <small id="model-detail">Connecting to local inference service</small>
           </div>
           <a class="help-link" href="#about"><span>?</span> How it works</a>
           <div class="profile"><div class="avatar">NK</div><div><strong>Nasim Kazi</strong><small>Local workspace</small></div><span class="more">•••</span></div>
@@ -64,11 +65,11 @@
               <label class="dropzone" id="dropzone" for="file-input">
                 <input id="file-input" type="file" accept="image/*" />
                 <div class="upload-icon">↑</div>
-                <strong>Drop your <span id="file-kind">image</span> here</strong>
+                <strong id="file-title">Drop your image here</strong>
                 <span>or <u>browse from your computer</u></span>
                 <small id="file-hint">PNG, JPG up to 25 MB</small>
               </label>
-              <div class="sample-row"><span>Not ready with a file?</span><button id="sample-button">Try a sample <span>↗</span></button></div>
+              <div class="sample-row"><span>Need to choose a different file?</span><button id="sample-button">Browse files <span>↗</span></button></div>
             </div>
 
             <div class="panel settings-panel">
@@ -81,24 +82,26 @@
                 <input id="strength" type="range" min="0" max="100" value="72" />
                 <div class="range-labels"><span>Subtle</span><span>Bold</span></div>
               </div>
-              <div class="control-row"><div><span class="control-title">Color balance</span><small>Preserve natural tones</small></div><button class="toggle on" id="color-toggle" aria-label="Toggle color balance"><span></span></button></div>
-              <div class="control-row"><div><span class="control-title">Denoise</span><small>Clean up image grain</small></div><button class="toggle on" id="denoise-toggle" aria-label="Toggle denoise"><span></span></button></div>
               <button class="enhance-button" id="enhance-button"><span class="button-icon">✦</span> Enhance <span class="button-arrow">→</span></button>
-              <p class="processing-note"><span>◉</span> Processing happens on your device</p>
+              <p class="processing-note"><span>◉</span> Images are enhanced with the local Zero-DCE model</p>
             </div>
           </section>
 
           <section class="panel preview-panel">
             <div class="panel-header preview-header">
               <div><div class="section-label">03 <span>Preview</span></div><h2>See the difference</h2></div>
-              <div class="preview-actions"><span class="resolution">1280 × 853</span><button class="icon-button" aria-label="Expand preview">⤢</button></div>
+              <div class="preview-actions"><span class="resolution" id="resolution">No image selected</span><button class="icon-button" aria-label="Expand preview">⤢</button></div>
             </div>
             <div class="comparison" id="comparison">
-              <img class="preview-image original-image" id="original-image" src="Zero-DCE/samples/dragon_inp.jpg" alt="Low-light original preview" />
-              <div class="enhanced-layer" id="enhanced-layer"><img class="preview-image" src="Zero-DCE/samples/dragon_out.png" alt="Enhanced preview" /></div>
+              <img class="preview-image original-image" id="original-image" alt="Selected original preview" hidden />
+              <video class="preview-video" id="original-video" controls hidden></video>
+              <div class="enhanced-layer" id="enhanced-layer">
+                <div class="enhanced-empty" id="enhanced-empty">Enhanced output will appear here</div>
+                <img class="preview-image enhanced-image" id="enhanced-image" alt="Zero-DCE enhanced preview" hidden />
+              </div>
               <div class="comparison-handle" id="comparison-handle"><span>↔</span></div>
-              <div class="compare-label before">ORIGINAL</div><div class="compare-label after">ENHANCED</div>
-              <div class="preview-empty" id="preview-empty"><span>✦</span><p>Your enhanced preview will appear here</p></div>
+              <div class="compare-label before" id="original-label" hidden>ORIGINAL</div><div class="compare-label after" hidden>ENHANCED</div>
+              <div class="preview-empty" id="preview-empty"><span>↑</span><p>Select an image or video to preview it here</p></div>
             </div>
             <div class="preview-footer"><span><i class="legend original"></i> Original</span><span><i class="legend enhanced"></i> Enhanced</span><span class="drag-hint">Drag the divider to compare</span><button class="download-button" id="download-button" disabled>Download <span>↓</span></button></div>
           </section>
@@ -112,6 +115,6 @@
       </main>
     </div>
     <div class="toast" id="toast" role="status"></div>
-    <script src="script.js"></script>
+    <script src="script.js?v=20260927"></script>
   </body>
 </html>
