@@ -11,7 +11,7 @@ This repository consists of 3 parts:
 
 The repository includes a browser workspace in `frontend/` and a local Flask API that runs the included Zero-DCE TFLite model with LiteRT. Selecting or dropping an image previews the original locally; pressing **Enhance** sends it to the local model and displays the returned result for comparison and download.
 
-To run the complete image-enhancement app, use Python 3.10 or 3.11:
+To run the complete image-enhancement app locally on Python 3.11:
 
 ```bash
 python3.11 -m venv .venv
@@ -22,7 +22,7 @@ python backend/app.py
 
 Open <http://localhost:5001>. The backend loads `Zero-DCE/model_trained/model.tflite` on the first health check. Keep the process running while using the app. Image inference is supported; video preview is available, but video enhancement still uses the separate C++ workflow below.
 
-Vercel deploys the Flask app and TFLite model together, so image inference is available from the deployed URL as well. The temporary anonymous Vercel preview expires after about an hour unless it is claimed; sign in to Vercel for a persistent deployment. Vercel Functions have a 60-second inference limit.
+Vercel deploys the Flask app and TFLite model together using Python 3.12 and LiteRT 2.2, so image inference is available from the deployed URL as well. Local Python before 3.12 uses LiteRT 1.0.1. Vercel Functions have a 60-second inference limit.
 
 ## Brightening Algorithm - Zero-DCE
 The deep learning model is a Tensorflow 2.2 implementation of:
