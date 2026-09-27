@@ -18,6 +18,11 @@
   outline-offset: 3px;
 }
 
+.status-dot.status-off {
+  background: #f4a36b;
+  box-shadow: 0 0 9px #f4a36b;
+}
+
 [hidden] {
   display: none !important;
 }
@@ -44,6 +49,12 @@
 .enhanced-layer {
   width: var(--split, 53%);
   background: rgba(9, 18, 31, 0.94);
+}
+
+.enhanced-layer .enhanced-image {
+  width: var(--preview-width, 100%);
+  max-width: none;
+  object-fit: contain;
 }
 
 .comparison-handle {

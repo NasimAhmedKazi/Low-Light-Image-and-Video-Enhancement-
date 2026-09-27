@@ -30,9 +30,9 @@
 
         <div class="sidebar-bottom">
           <div class="model-card">
-            <div class="model-card-top"><span class="status-dot"></span><span>Preview ready</span><span class="model-version">v1.0</span></div>
+            <div class="model-card-top"><span class="status-dot" id="model-status-dot"></span><span id="model-status">Checking model</span><span class="model-version">v1.0</span></div>
             <p>Zero-DCE</p>
-            <small>Inference service not connected</small>
+            <small id="model-detail">Connecting to local inference service</small>
           </div>
           <a class="help-link" href="#about"><span>?</span> How it works</a>
           <div class="profile"><div class="avatar">NK</div><div><strong>Nasim Kazi</strong><small>Local workspace</small></div><span class="more">•••</span></div>
@@ -82,10 +82,8 @@
                 <input id="strength" type="range" min="0" max="100" value="72" />
                 <div class="range-labels"><span>Subtle</span><span>Bold</span></div>
               </div>
-              <div class="control-row"><div><span class="control-title">Color balance</span><small>Preserve natural tones</small></div><button class="toggle on" id="color-toggle" aria-label="Toggle color balance"><span></span></button></div>
-              <div class="control-row"><div><span class="control-title">Denoise</span><small>Clean up image grain</small></div><button class="toggle on" id="denoise-toggle" aria-label="Toggle denoise"><span></span></button></div>
               <button class="enhance-button" id="enhance-button"><span class="button-icon">✦</span> Enhance <span class="button-arrow">→</span></button>
-              <p class="processing-note"><span>◉</span> File preview is local; inference is not connected yet</p>
+              <p class="processing-note"><span>◉</span> Images are enhanced with the local Zero-DCE model</p>
             </div>
           </section>
 
@@ -97,7 +95,10 @@
             <div class="comparison" id="comparison">
               <img class="preview-image original-image" id="original-image" alt="Selected original preview" hidden />
               <video class="preview-video" id="original-video" controls hidden></video>
-              <div class="enhanced-layer" id="enhanced-layer"><div class="enhanced-empty">Enhanced output will appear here</div></div>
+              <div class="enhanced-layer" id="enhanced-layer">
+                <div class="enhanced-empty" id="enhanced-empty">Enhanced output will appear here</div>
+                <img class="preview-image enhanced-image" id="enhanced-image" alt="Zero-DCE enhanced preview" hidden />
+              </div>
               <div class="comparison-handle" id="comparison-handle"><span>↔</span></div>
               <div class="compare-label before" id="original-label" hidden>ORIGINAL</div><div class="compare-label after" hidden>ENHANCED</div>
               <div class="preview-empty" id="preview-empty"><span>↑</span><p>Select an image or video to preview it here</p></div>
