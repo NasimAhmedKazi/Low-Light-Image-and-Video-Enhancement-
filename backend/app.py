@@ -2,20 +2,14 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import threading
 from pathlib import Path
 
 import numpy as np
 from flask import Flask, jsonify, request, send_file, send_from_directory
 from PIL import Image, ImageOps, UnidentifiedImageError
-
-try:
-    import tensorflow as tf
-except ImportError as error:
-    tf = None
-    TENSORFLOW_IMPORT_ERROR = error
-else:
-    TENSORFLOW_IMPORT_ERROR = None
+from ai_edge_litert.interpreter import Interpreter
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,6 +18,8 @@ MODEL_DIR = ROOT / "Zero-DCE" / "model_trained"
 MAX_IMAGE_PIXELS = 12_000_000
 MODEL_INPUT_SIZE = (512, 512)
 model = None
+model_input_index = None
+model_output_index = None
 model_lock = threading.Lock()
 inference_lock = threading.Lock()
 app = Flask(__name__, static_folder=None)
@@ -38,19 +34,33 @@ def request_too_large(_error):
 
 
 def load_model():
-    global model
+    global model, model_input_index, model_output_index
     if model is not None:
         return model
-    if tf is None:
-        raise RuntimeError(
-            "TensorFlow is not installed. Install backend/requirements.txt with Python 3.10 or 3.11."
-        ) from TENSORFLOW_IMPORT_ERROR
 
     with model_lock:
         if model is None:
-            if not MODEL_DIR.is_dir():
-                raise RuntimeError(f"SavedModel directory not found: {MODEL_DIR}")
-            model = tf.saved_model.load(str(MODEL_DIR))
+            model_path = MODEL_DIR / "model.tflite"
+            if not model_path.is_file():
+                raise RuntimeError(f"TFLite model not found: {model_path}")
+            interpreter = Interpreter(model_path=str(model_path), num_threads=2)
+            input_details = interpreter.get_input_details()
+            output_details = interpreter.get_output_details()
+            if len(input_details) != 1:
+                raise RuntimeError(f"Expected one model input, found {len(input_details)}.")
+            image_outputs = [
+                detail for detail in output_details
+                if detail["name"].endswith(":1")
+            ]
+            if len(image_outputs) != 1:
+                raise RuntimeError(
+                    "Could not locate the enhanced-image output (StatefulPartitionedCall:1)."
+                )
+            model_input_index = input_details[0]["index"]
+            model_output_index = image_outputs[0]["index"]
+            interpreter.resize_tensor_input(model_input_index, [1, *MODEL_INPUT_SIZE, 3])
+            interpreter.allocate_tensors()
+            model = interpreter
     return model
 
 
@@ -99,29 +109,25 @@ def enhance():
 
     try:
         loaded_model = load_model()
-        original_tensor = tf.convert_to_tensor(input_pixels[None, ...], dtype=tf.float32)
-        tensor = tf.image.resize(original_tensor, MODEL_INPUT_SIZE)
+        image_tensor = np.asarray(
+            Image.fromarray(np.uint8(input_pixels * 255)).resize(
+                (MODEL_INPUT_SIZE[1], MODEL_INPUT_SIZE[0]),
+                Image.Resampling.BILINEAR,
+            ),
+            dtype=np.float32,
+        ) / 255.0
         with inference_lock:
-            serving = getattr(loaded_model, "signatures", {}).get("serving_default")
-            outputs = serving(tensor) if serving is not None else loaded_model(tensor)
-        if isinstance(outputs, (tuple, list)):
-            enhanced = outputs[1] if len(outputs) > 1 else outputs[0]
-        elif isinstance(outputs, dict):
-            enhanced = outputs.get("enhanced_image", outputs.get("output_1", outputs.get("output_0")))
-            if enhanced is None:
-                raise RuntimeError(
-                    f"The SavedModel did not return an enhanced image (outputs: {', '.join(outputs)})."
-                )
-        else:
-            enhanced = outputs
-
-        enhanced = tf.convert_to_tensor(enhanced, dtype=tf.float32)
-        if len(enhanced.shape) == 4:
-            enhanced = enhanced[0]
-        if enhanced.shape[0] != height or enhanced.shape[1] != width:
-            enhanced = tf.image.resize(enhanced, (height, width))
-        blended = (1 - strength) * original_tensor[0] + strength * enhanced
-        pixels = tf.cast(tf.round(tf.clip_by_value(blended, 0, 1) * 255), tf.uint8).numpy()
+            loaded_model.set_tensor(model_input_index, image_tensor[None, ...])
+            loaded_model.invoke()
+            enhanced = loaded_model.get_tensor(model_output_index)[0]
+        enhanced = np.asarray(
+            Image.fromarray(
+                np.uint8(np.clip(enhanced, 0, 1) * 255)
+            ).resize((width, height), Image.Resampling.BILINEAR),
+            dtype=np.float32,
+        ) / 255.0
+        blended = (1 - strength) * input_pixels + strength * enhanced
+        pixels = np.uint8(np.round(np.clip(blended, 0, 1) * 255))
     except Exception as error:
         logger.exception("Zero-DCE inference failed")
         return jsonify(error=f"Zero-DCE could not enhance this image: {error}"), 500
@@ -133,4 +139,4 @@ def enhance():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "5001")), debug=False)

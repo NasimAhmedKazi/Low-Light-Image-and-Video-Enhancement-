@@ -9,7 +9,7 @@ This repository consists of 3 parts:
 
 ## Frontend
 
-The repository includes a browser workspace in `frontend/` and a local Flask API that runs the included Zero-DCE SavedModel. Selecting or dropping an image previews the original locally; pressing **Enhance** sends it to the local model and displays the returned result for comparison and download.
+The repository includes a browser workspace in `frontend/` and a local Flask API that runs the included Zero-DCE TFLite model with LiteRT. Selecting or dropping an image previews the original locally; pressing **Enhance** sends it to the local model and displays the returned result for comparison and download.
 
 To run the complete image-enhancement app, use Python 3.10 or 3.11:
 
@@ -20,9 +20,9 @@ python -m pip install -r backend/requirements.txt
 python backend/app.py
 ```
 
-Open <http://localhost:5000>. The backend loads `Zero-DCE/model_trained` on the first health check. Keep the process running while using the app. Image inference is supported; video preview is available, but video enhancement still uses the separate C++ workflow below.
+Open <http://localhost:5001>. The backend loads `Zero-DCE/model_trained/model.tflite` on the first health check. Keep the process running while using the app. Image inference is supported; video preview is available, but video enhancement still uses the separate C++ workflow below.
 
-The Vercel deployment serves the static frontend only. To use model inference, run the local backend and open its `localhost:5000` page.
+The Vercel deployment serves the static frontend only. To use model inference, run the local backend and open its `localhost:5001` page.
 
 ## Brightening Algorithm - Zero-DCE
 The deep learning model is a Tensorflow 2.2 implementation of:
